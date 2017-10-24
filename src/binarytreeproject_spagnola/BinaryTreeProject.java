@@ -92,7 +92,7 @@ public class BinaryTreeProject {
         "https://roll20.net/compendium/dnd5e/Classes:Wizard#content"};*/
 
         String startURL = "https://roll20.net/";
-        String[] urls = new String[1];
+        String[] urls = new String[10];
         LinkedList<String> urlQueue = new LinkedList<>();
         urlQueue.add(startURL);
         String tempURL;

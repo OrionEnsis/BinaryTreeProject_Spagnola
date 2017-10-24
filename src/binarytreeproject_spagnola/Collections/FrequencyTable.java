@@ -62,10 +62,10 @@ public class FrequencyTable implements Serializable{
         //FOREVER
         for(;;){
             //if null put it here
-            if(e == null){
+            if(e.next == null){
                 //add the new Node to the list
                 //table[i] = new Node(key,value,table[i]);
-                e = new Node(key,value);
+                e.next = new Node(key,value);
                 count++;
                 
                 //IF we are reaching birthday paradox
@@ -266,11 +266,12 @@ public class FrequencyTable implements Serializable{
     private void readObject(ObjectInputStream s) throws IOException,ClassNotFoundException{
         //s.defaultReadObject();
         count = s.readInt();
+        int temp = count;
         System.out.println(count);
-        table = new Node[count];
+        table = new Node[START_SIZE];
         String key;
         int value;
-        for(int i = 0; i < count; i++){
+        for(int i = 0; i < temp; i++){
             key =(String)s.readObject();
             value = s.readInt();
             put(key,value);
