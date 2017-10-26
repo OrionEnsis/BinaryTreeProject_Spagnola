@@ -25,15 +25,19 @@ public class URLTable implements Comparable<URLTable>, Serializable {
     public String url;
     public FrequencyTable table;
     public double comparability;
-
-    public URLTable(String inURL) throws IOException {
+    
+    public URLTable(String inURL)throws IOException{
+        this(inURL,Jsoup.connect(inURL).get());
+    }
+    
+    public URLTable(String inURL, Document doc) throws IOException {
         int weight = 1;
         table = new FrequencyTable();
         url = inURL;
 
         String temp;
         String[] temparray;
-        Document doc = Jsoup.connect(url).get();
+        //Document doc = Jsoup.connect(url).get();
 
         Elements metaTags = doc.getElementsByTag("meta");
 
@@ -64,6 +68,7 @@ public class URLTable implements Comparable<URLTable>, Serializable {
         table=inTable;
     }
     //remove common words from the comparison
+
 
     String removeCommonWords(String word) {
         String[] commonWords = {"the", "a", "an", "attack"};
@@ -104,7 +109,7 @@ public class URLTable implements Comparable<URLTable>, Serializable {
         return "" + url + "\n" + comparability;
     }
 
-    /*private void writeObject(ObjectOutputStream s) throws IOException {
+    private void writeObject(ObjectOutputStream s) throws IOException {
         s.defaultWriteObject();
         s.writeObject(url);
         s.writeObject(table);
@@ -115,5 +120,6 @@ public class URLTable implements Comparable<URLTable>, Serializable {
         s.defaultReadObject();
         url = (String)s.readObject();
         table = (FrequencyTable)s.readObject();
-    }*/
+    }
+
 }

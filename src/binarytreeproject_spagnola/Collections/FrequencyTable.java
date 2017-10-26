@@ -229,7 +229,7 @@ public class FrequencyTable implements Serializable{
         Node[] newTable = new Node[count*2];
         ArrayList<Node> tempList = new ArrayList<>();
         
-        System.out.println("resizing...");
+        //System.out.println("resizing...");
         count = 0;
         //store every node in a temporary holding place
         for(int i = 0; i < table.length; i++){
@@ -255,7 +255,7 @@ public class FrequencyTable implements Serializable{
         //Write all elements to the file
         for(int i = 0; i < table.length; i ++){
             for(Node e = table[i]; e != null; e = e.next){
-                System.out.println(e.key + " " + e.value + " " + j);
+                //System.out.println(e.key + " " + e.value + " " + j);
                 s.writeObject(e.key);
                 s.writeInt(e.value);
                 j++;
@@ -267,7 +267,7 @@ public class FrequencyTable implements Serializable{
         //s.defaultReadObject();
         count = s.readInt();
         int temp = count;
-        System.out.println(count);
+        //System.out.println(count);
         table = new Node[START_SIZE];
         String key;
         int value;
@@ -275,7 +275,7 @@ public class FrequencyTable implements Serializable{
             key =(String)s.readObject();
             value = s.readInt();
             put(key,value);
-            System.out.println(i + " "+ key);
+            //System.out.println(i + " "+ key);
         }
     }
     
