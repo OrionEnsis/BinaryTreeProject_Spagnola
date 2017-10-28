@@ -103,13 +103,16 @@ public class URLHasher implements Serializable {
         FileInputStream fis;
         ObjectInputStream ois;
         tables = new URLTable[files.length];
-
+        int longestURL =0;
         for (int i = 0; i < files.length; i++) {
             fis = new FileInputStream(files[i]);
             ois = new ObjectInputStream(fis);
             temp = (URLTable)ois.readObject();
             tables[i] = temp;
+            if(tables[i].url.length() > longestURL)
+                longestURL = tables[i].url.length();
         }
+        System.out.println("longest URL: " + longestURL);
     }
     
     void addURLs(String startURL) throws IOException {
