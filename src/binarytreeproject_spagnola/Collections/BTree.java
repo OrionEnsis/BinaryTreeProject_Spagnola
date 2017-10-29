@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,7 +25,7 @@ public class BTree {
     int t;          //the minimum degree
 
     static class Node {
-
+        public static int test = 0;
         public static final String fileName = "Btree.txt";
         static final int URL_MAX_LENGTH = 500;
         public static final int T = 4;
@@ -57,7 +58,7 @@ public class BTree {
         }
 
         public boolean isFull() {
-            if (count == keys.length) {
+            if (count == K-1) {
                 return true;
             } else {
                 return false;
@@ -68,58 +69,48 @@ public class BTree {
 
             try {
                 RandomAccessFile file = new RandomAccessFile(fileName, "rw");
-                FileChannel f = file.getChannel();
                 //setup file to read
-                ByteBuffer b = ByteBuffer.allocate(SIZE);
-                f.read(b, x);
-
+                file.seek(x);
+                
                 //setup node variables
-                long inID;
-                int inCount;
+                long inID = file.readLong();
+                int inCount = file.readInt();
                 boolean inLeaf;
                 String[] inKeys = new String[K - 1];
                 String[] inValues = new String[K - 1];
                 long[] inChildren = new long[K];
 
                 //read non array members
-                byte temp;
-                inID = b.getLong();
-                inCount = b.getInt();
-                temp = b.get();
-                if (temp == 1) {
-                    inLeaf = true;
-                } else {
-                    inLeaf = false;
-                }
+                inLeaf = file.readBoolean();
 
                 //read arrays
                 int length;
                 byte[] tempString;
 
-                for (int i = 0; i < inKeys.length; i++) {
+                for (int i = 0; i < inCount; i++) {
                     //get the length of the next string
-                    length = b.getInt() * 4;
+                    length = file.readInt();
                     tempString = new byte[length];
 
                     //get the next string
-                    b.get(tempString);
+                    file.readFully(tempString);
                     inKeys[i] = new String(tempString);
                 }
-                for (int i = 0; i < inValues.length; i++) {
+                for (int i = 0; i < inCount; i++) {
                     //get the length of the next string
-                    length = b.getInt() * 4;
+                    length = file.readInt();
                     tempString = new byte[length];
 
                     //get the next string
-                    b.get(tempString);
+                    file.readFully(tempString);
                     inValues[i] = new String(tempString);
                 }
-
-                for (int i = 0; i < inChildren.length; i++) {
-                    inChildren[i] = b.getLong();
+                if(!inLeaf){
+                    for (int i = 0; i < inCount+1; i++) {
+                        inChildren[i] = file.readLong();
+                    }
                 }
-                b.clear();
-                f.close();
+                file.close();
                 return new Node(inID, inCount, inLeaf, inKeys, inValues, inChildren);
             } catch (IOException E) {;
                 return null;
@@ -129,48 +120,42 @@ public class BTree {
         public void diskWrite(long x) {
             try {
                 RandomAccessFile file = new RandomAccessFile(fileName, "rw");
-                FileChannel f = file.getChannel();
+                file.seek(x);
 
                 //setup the position and file
-                f.position(x);
-                ByteBuffer b = ByteBuffer.allocate(SIZE);
 
                 //put non array elements in
-                b.putLong(id);
-                b.putInt(count);
-                if (leaf) {
-                    b.put((byte) 1);
-                } else {
-                    b.put((byte) 0);
-                }
+                file.writeLong(id);
+                file.writeInt(count);
+                file.writeBoolean(leaf);
 
                 byte[] stringConversion;
+                int length;
                 //for(each member of the array)
-                for (int i = 0; i < keys.length; i++) {
+                for (int i = 0; i < count; i++) {
                     //write the length of the string
-                    b.putInt(keys[i].length());
                     //write the string
                     stringConversion = keys[i].getBytes();
-                    b.put(stringConversion);
+                    length = stringConversion.length;
+                    file.writeInt(length);
+                    file.write(stringConversion);
 
                 }
-                for (int i = 0; i < values.length; i++) {
+                for (int i = 0; i < count; i++) {
                     //write the length of the string
-                    b.putInt(keys[i].length());
                     //write the string
-                    stringConversion = keys[i].getBytes();
-                    b.put(stringConversion);
+                    stringConversion = values[i].getBytes();
+                    file.writeInt(stringConversion.length);
+                    file.write(stringConversion);
 
                 }
-                for (int i = 0; i < children.length; i++) {
-                    b.putLong(children[i]);
+                if(!leaf){
+                    for (int i = 0; i < count +1; i++) {
+                        file.writeLong(children[i]);
+                    }
                 }
 
-                while (b.hasRemaining()) {
-                    f.write(b);
-                }
-                b.clear();
-                f.close();
+                file.close();
             } catch (IOException ex) {
                 Logger.getLogger(BTree.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -179,15 +164,14 @@ public class BTree {
         public void traverse() throws IOException {
             int i = 0;
             Node n;
-            for (i = 0; i < K - 1; i++) {
+            for (i = 0; i < count; i++) {
                 if (!leaf) {
                     n = diskRead(children[i]);
                     n.traverse();
                 }
-
-                if (i < count) {
-                    System.out.println("Key: " + keys[i] + " Value: " + values[i]);
-                }
+                System.out.println("Key: " + keys[i] + " Value: " + values[i]);
+                System.out.println(test);
+                test++;
             }
             if (!leaf) {
                 n = diskRead(children[i]);
@@ -198,20 +182,35 @@ public class BTree {
         }
     }
 
-    public BTree() throws FileNotFoundException {
+    public BTree() throws FileNotFoundException, IOException {
         File file = new File(Node.fileName);
-        if (!file.exists()) {
-            root = Node.diskRead(0);
+        if (file.exists()) {
+            root = Node.diskRead(getRoot());
         } else {
+            file.createNewFile();
             root = new Node();
+            setRoot(8);
+            allocateNode(root);
         }
     }
-
+    private void setRoot(long rootID)throws FileNotFoundException, IOException{
+        RandomAccessFile file = new RandomAccessFile(Node.fileName, "rw");
+        file.writeLong(rootID);
+        file.close();
+    }
+    private long getRoot() throws FileNotFoundException, IOException{
+        RandomAccessFile file = new RandomAccessFile(Node.fileName, "rw");
+        long size = file.readLong();
+        file.close();
+        return size;
+    }
     private void allocateNode(Node n) {
         try {
             RandomAccessFile file = new RandomAccessFile(Node.fileName, "rw");
-            FileChannel f = file.getChannel();
-            long size = f.size();
+            long size = file.length();
+            file.seek(size + Node.SIZE);
+            file.write(0);
+            file.close();
             n.id = size;
             n.diskWrite(size);
         } catch (FileNotFoundException ex) {
@@ -220,52 +219,67 @@ public class BTree {
             Logger.getLogger(BTree.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
-    public void put(String key, String value) {
-        treeInsert(key, value);
+    public void traverse() throws IOException{
+        root.traverse();
+    }
+    public void put(String key, String value) throws IOException {
+        //if(!searchTree(key))
+            treeInsert(key, value);
     }
 
-    private void treeInsert(String k, String v) {
+    private void treeInsert(String k, String v) throws IOException {
+        System.out.println("inserting: "+k);
         //make sure the node is the root
         Node r = root;
 
         //IF the root is full
         if (r.isFull()) {
+            System.out.println("Root is full.");
             //create new node s
             Node s = new Node();
             allocateNode(s);
 
-            //The root is now s
-            root = s;
             //s is not a leaf
             s.leaf = false;
             //s has no keys
             s.count = 0;
             //s first child is the old root
             s.children[0] = r.id;
+            
             //Split child(s,1,r)
-            treeSplitChild(s, 1, r);
+            treeSplitChild(s, 0, r);
             //insertnonfull(s,k)
             treeInsertNonFull(s, k, v);
+            //The root is now s
+            root = s;
+            setRoot(s.id);
         }
 
         //ELSE treeinsert nonfull(r,k)
-        treeInsertNonFull(r, k, v);
+        else
+            treeInsertNonFull(r, k, v);
+        
     }
 
     private void treeInsertNonFull(Node x, String k, String v) {
         //index = elements of x
-        int i = x.count;
-
+        int i = x.count-1;
+        System.out.println("inserting into nonFull node.");
         //IF x is a leaf
         if (x.leaf) {
+            System.out.println("we're a leaf!");
             //WHILE i>= 1 AND k< nodex.key[i]
-            while (i >= 1 && k.compareTo(x.keys[i]) < 0) {
+            while (i >= 0 && k.compareTo(x.keys[i]) <= 0) {
                 //nodex.key[i+1] = nodex.key[i];
                 x.keys[i + 1] = x.keys[i];
+                x.values[i+1] = x.values[i];
                 i--;
             }
             //nodex.key[i+1] = k
+            if(k.equals(x.keys[i+1])){
+                System.out.println("Found a duplicate: "+k);
+                return;
+            }
             x.keys[i + 1] = k;
             x.values[i + 1] = v;
 
@@ -274,7 +288,9 @@ public class BTree {
 
             //DISK WRITE X
             x.diskWrite(x.id);
+            
         } else {
+            System.out.println("We're not a leaf!");
             //WHILE i>=1 AND k <nodex.key[i]
             while (i >= 1 && k.compareTo(x.keys[i]) < 0) {
                 i--;
@@ -294,23 +310,26 @@ public class BTree {
                     i++;
             }
             //TreeInsertNonFull(nodex.child[i],k)s 
+            System.out.println("going one deeper");
             treeInsertNonFull(y,k,v);
         }
     }
 
     private void treeSplitChild(Node x, int i, Node y) {
+        
+        System.out.println("Splitting a child.");
         //allocate a node
         Node z = new Node();
         allocateNode(z);
 
-        //assign z to y
-        z = y;
+        //assign zleaf= yleaf
+        z.leaf = y.leaf;
 
         //count keys of nodez = half keys -1
         z.count = Node.T - 1;
 
         //for 0 to half the keys-1
-        for (int j = 0; j < z.count; j++) {
+        for (int j = 0; j < Node.T-1; j++) {
             //assign the key over
             z.keys[j] = y.keys[Node.T + j];
             z.values[j] = y.values[Node.T + j];
@@ -328,22 +347,22 @@ public class BTree {
         y.count = Node.T - 1;
 
         //for j = keys of x +1 down to i+1
-        for (int j = x.count + 1; j > i + 1; j--) {
+        for (int j = x.count; j >= i+1; j--) {
             //nodex.children[j+1] is nodex.children[j]
             x.children[j + 1] = x.children[j];
         }
         //nodex[i+1]= z
-        x.children[i + 1] = z.id;
+        x.children[i+1] = z.id;
 
         //FOR j = num of nodex's children downto i
-        for (int j = x.count; j > i; i--) {
+        for (int j = x.count -1; j >= i; j--) {
             //nodex.keys[j+1] = nodex.keys[j]
             x.keys[j + 1] = x.keys[j];
             x.values[j + 1] = x.values[j];
         }
         //nodex.key[i] = nodex.key[half the keys]
-        x.keys[i] = y.keys[Node.T];
-        x.values[i] = y.values[Node.T];
+        x.keys[i] = y.keys[Node.T -1];
+        x.values[i] = y.values[Node.T -1];
 
         //number of keysx++
         x.count++;
@@ -355,17 +374,20 @@ public class BTree {
     }
 
     public boolean searchTree(String key) throws FileNotFoundException {
-        return searchTree(root, key);
+        if(root.count != 0)
+            return searchTree(root, key);
+        else
+            return false;
     }
 
     private boolean searchTree(Node n, String k) throws FileNotFoundException {
         int i = 0;
         //WHILE i <= count && k >= n.key[i]
-        while (i <= n.count && k.compareTo(n.keys[i]) >= 0) {
+        while (i < n.count && k.compareTo(n.keys[i]) > 0) {
             i++;
         }
         //IF i <= count && k == n.key[i]
-        if (i <= n.count && k.equals(n.keys[i])) {
+        if (i < n.count&& k.equals(n.keys[i])) {
             return true;
         } //ELSE IF (n.leaf)
         else if (n.leaf) {
@@ -375,24 +397,4 @@ public class BTree {
         }
     }
 
-    public String getValue(String key) throws FileNotFoundException {
-        return getValue(root, key);
-    }
-
-    private String getValue(Node n, String k) throws FileNotFoundException {
-        int i = 0;
-        //WHILE i <= count && k >= n.key[i]
-        while (i <= n.count && k.compareTo(n.keys[i]) >= 0) {
-            i++;
-        }
-        //IF i <= count && k == n.key[i]
-        if (i <= n.count && k.equals(n.keys[i])) {
-            return n.values[i];
-        } //ELSE IF (n.leaf)
-        else if (n.leaf) {
-            return null;
-        } else {
-            return getValue(Node.diskRead(n.children[i]), k);
-        }
-    }
 }

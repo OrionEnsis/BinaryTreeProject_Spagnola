@@ -29,9 +29,6 @@ public class BinaryTreeProject {
         //hasher.saveAll();
         URLTable tables[] = hasher.getAllTables();
         
-        for(int i = 0; i < tables.length;i++){
-            System.out.println(tables[i].url);
-        }
         //hasher.getAllTables()[0].table.printAll();
         /* Set the Nimbus look and feel */
         //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">

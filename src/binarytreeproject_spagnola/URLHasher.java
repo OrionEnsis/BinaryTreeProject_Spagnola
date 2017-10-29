@@ -20,13 +20,13 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-
+import binarytreeproject_spagnola.Collections.BTree;
 /**
  *
  * @author Jim
  */
 public class URLHasher implements Serializable {
-
+    BTree btree;
     URLTable[] tables;
     URLTable promptedURL;
 
@@ -42,7 +42,18 @@ public class URLHasher implements Serializable {
     }
 
     public URLHasher() throws IOException, ClassNotFoundException {
-        loadAll();
+        btree = new BTree();
+        //loadAll();
+        btree.traverse();
+        int j=0;
+        int k = 0;
+        for(int i = 0; i < tables.length;i++){
+            if(btree.searchTree(tables[i].url))
+                j++;
+            else
+                k++;            
+        }
+        System.out.println(j+ " " + k);
     }
 
     public void hashURL(String url) throws IOException {
@@ -102,6 +113,7 @@ public class URLHasher implements Serializable {
         URLTable temp;
         FileInputStream fis;
         ObjectInputStream ois;
+       
         tables = new URLTable[files.length];
         int longestURL =0;
         for (int i = 0; i < files.length; i++) {
@@ -111,10 +123,29 @@ public class URLHasher implements Serializable {
             tables[i] = temp;
             if(tables[i].url.length() > longestURL)
                 longestURL = tables[i].url.length();
+
+                btree.put(tables[i].url,files[i].getName());
+                System.out.println(i+ " "+ tables[i].url + " " + files[i].getName());
+            
         }
         System.out.println("longest URL: " + longestURL);
     }
     
+    public void cluster(){
+        //Get all members
+        //assign 5-10 to group for as medoids
+        //FOR every medoid
+            //get a vector sum of comparability with every non member
+        //WHILE we want to keep organizing things
+            //for every remaining member
+                //compare against each medoid
+                //join the group you are most similar to. 
+            //For each medoids
+                //For each remaining
+                    //swap a medoid and non medoid
+                    //Get a vector sum of comparability
+                    //IF it is worst...do not swap
+    }
     void addURLs(String startURL) throws IOException {
 
         //String[] urls = new String[1000];
